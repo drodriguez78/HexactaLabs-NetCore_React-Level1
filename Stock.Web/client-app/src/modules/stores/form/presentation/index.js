@@ -39,7 +39,7 @@ StoreForm.propTypes = {
 };
 
 export default reduxForm({
-  form: "provider",
+  form: "provider,",
   validate: Validator(schema),
   enableReinitialize: true
 })(StoreForm);

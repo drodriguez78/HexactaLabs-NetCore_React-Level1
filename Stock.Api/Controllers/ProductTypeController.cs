@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Stock.Api.DTOs;
+using Stock.Api.Extensions;
 using Stock.AppService.Services;
 using Stock.Model.Entities;
 using System;
@@ -11,13 +12,13 @@ using System.Linq.Expressions;
 namespace Stock.Api.Controllers
 {
     [Produces("application/json")]
-    [Route("api/producttype")]
+    [Route("api/product")]
     [ApiController]
     public class ProductTypeController : ControllerBase
     {
         private readonly ProductTypeService service;
         private readonly IMapper mapper;
-        
+
         public ProductTypeController(ProductTypeService service, IMapper mapper)
         {
             this.service = service;
@@ -53,7 +54,7 @@ namespace Stock.Api.Controllers
         public ActionResult Post([FromBody] ProductTypeDTO value)
         {
             TryValidateModel(value);
-            
+
             try
             {
                 var productType = this.mapper.Map<ProductType>(value);
@@ -88,16 +89,42 @@ namespace Stock.Api.Controllers
         [HttpDelete("{id}")]
         public ActionResult Delete(string id)
         {
-            try {
+            try
+            {
                 var productType = this.service.Get(id);
 
                 Expression<Func<Product, bool>> filter = x => x.ProductType.Id.Equals(id);
-                
+
                 this.service.Delete(productType);
                 return Ok(new { Success = true, Message = "", data = id });
-            } catch {
+            }
+            catch
+            {
                 return Ok(new { Success = false, Message = "", data = id });
             }
+        }
+
+        [HttpPost("search")]
+        public ActionResult Search([FromBody] ProductTypeSearchDTO model)
+        {
+            Expression<Func<ProductType, bool>> filter = x => !string.IsNullOrWhiteSpace(x.Id);
+
+            if (!string.IsNullOrWhiteSpace(model.Initials))
+            {
+                filter = filter.AndOrCustom(
+                    x => x.Initials.ToUpper().Contains(model.Initials.ToUpper()),
+                    model.Condition.Equals(ActionDto.AND));
+            }
+
+            if (!string.IsNullOrWhiteSpace(model.Description))
+            {
+                filter = filter.AndOrCustom(
+                    x => x.Description.ToUpper().Contains(model.Description.ToUpper()),
+                    model.Condition.Equals(ActionDto.AND));
+            }
+
+            var providers = this.service.Search(filter);
+            return Ok(providers);
         }
     }
 }
